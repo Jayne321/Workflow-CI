@@ -46,5 +46,11 @@ jobs:
 
     - name: Build and Push Docker Image via MLflow
       run: |
-        mlflow models build-docker -m "runs:/${{ env.MLFLOW_RUN_ID }}/model" -n "urashia/workflow-ci:latest"
+        # Force MLflow's internal Docker layer generator to compile using a strict Python 3.12 environment base
+        mlflow models build-docker \
+          -m "runs:/${{ env.MLFLOW_RUN_ID }}/model" \
+          -n "urashia/workflow-ci:latest" \
+          --env-manager local \
+          --base-image "python:3.12-slim"
+          
         docker push urashia/workflow-ci:latest
