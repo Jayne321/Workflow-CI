@@ -3,44 +3,49 @@ name: Machine Learning Retraining and Docker CI
 on:
   push:
     branches:
-      - main  # Alur kerja berjalan otomatis setiap kali Anda melakukan git push ke branch main
-  workflow_dispatch: # Mengizinkan Anda memicu alur kerja secara manual dari halaman web GitHub
+      - main  
+  workflow_dispatch: 
 
 jobs:
   ci_pipeline:
     runs-on: ubuntu-latest
 
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
     steps:
-    # 1. Mengunduh seluruh kode proyek dari repositori GitHub ke server runner
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    # 2. Menyiapkan Python versi 3.12.7 sesuai regulasi kelas
     - name: Set up Python 3.12.7
       uses: actions/setup-python@v5
       with:
         python-version: '3.12.7'
+        cache: 'pip'
 
-    # 3. Memasang dependensi inti agar MLflow Project bisa dieksekusi di server Ubuntu
     - name: Install Core Dependencies
       run: |
         python -m pip install --upgrade pip
         pip install mlflow==2.19.0 scikit-learn pandas numpy
 
-    # 4. Melakukan retraining model otomatis menggunakan instruksi dari file MLProject
+    # Modifikasi: Simpan RUN_ID yang dihasilkan MLflow ke dalam format GitHub Environment
     - name: Run MLflow Project Retraining
+      id: mlflow_run
       run: |
-        mlflow run MLProject/ --entry-point main
+        mlflow run MLProject/ --entry-point main --no-conda
+        # Mengambil Run ID terakhir dari lokal mlruns untuk dipakai di step build-docker
+        RUN_ID=$(python -c "import mlflow; print(mlflow.search_runs().iloc[0]['run_id'])")
+        echo "MLFLOW_RUN_ID=$RUN_ID" >> $GITHUB_ENV
 
-    # 5. Masuk otomatis ke akun Docker Hub Anda menggunakan kredensial aman (GitHub Secrets)
+    # Perbaikan: Menggunakan penamaan GitHub Secrets yang benar (Merujuk ke nama variabel)
     - name: Log in to Docker Hub
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.urashia }}
         password: ${{ secrets.dckr_pat_XD-lxz5ues5L0frFKSejuakV2ic }}
 
-    # 6. Membangun Docker Image & Push Menggunakan Enkripsi Rahasia GitHub Secrets
+    # Perbaikan: Menggunakan variabel MLFLOW_RUN_ID yang valid dan dinamis
     - name: Build and Push Docker Image via MLflow
       run: |
-        mlflow models build-docker -m "runs:/${{ github.sha }}/model" -n "urashia/workflow-ci:latest"
+        mlflow models build-docker -m "runs:/${{ env.MLFLOW_RUN_ID }}/model" -n "urashia/workflow-ci:latest"
         docker push urashia/workflow-ci:latest
