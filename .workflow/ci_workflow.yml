@@ -28,23 +28,21 @@ jobs:
         python -m pip install --upgrade pip
         pip install mlflow==2.19.0 scikit-learn pandas numpy
 
-    # Modifikasi: Simpan RUN_ID yang dihasilkan MLflow ke dalam format GitHub Environment
     - name: Run MLflow Project Retraining
-      id: mlflow_run
       run: |
+        # Run MLflow project cleanly
         mlflow run MLProject/ --entry-point main --no-conda
-        # Mengambil Run ID terakhir dari lokal mlruns untuk dipakai di step build-docker
-        RUN_ID=$(python -c "import mlflow; print(mlflow.search_runs().iloc[0]['run_id'])")
+        
+        # Safely extract the local RUN_ID to populate the cloud environment variables
+        RUN_ID=$(python -c "import mlflow; print(mlflow.search_runs(experiment_names=['Housing_Prices_Retraining_CI']).iloc[0]['run_id'])")
         echo "MLFLOW_RUN_ID=$RUN_ID" >> $GITHUB_ENV
 
-    # Perbaikan: Menggunakan penamaan GitHub Secrets yang benar (Merujuk ke nama variabel)
     - name: Log in to Docker Hub
       uses: docker/login-action@v3
       with:
-        username: ${{ secrets.urashia }}
-        password: ${{ secrets.dckr_pat_XD-lxz5ues5L0frFKSejuakV2ic }}
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    # Perbaikan: Menggunakan variabel MLFLOW_RUN_ID yang valid dan dinamis
     - name: Build and Push Docker Image via MLflow
       run: |
         mlflow models build-docker -m "runs:/${{ env.MLFLOW_RUN_ID }}/model" -n "urashia/workflow-ci:latest"
