@@ -30,15 +30,15 @@ jobs:
 
     - name: Run MLflow Project Retraining
       run: |
-        # 1. Run the MLflow retraining pipeline using local environment manager
+        # 1. Run the MLflow retraining pipeline and capture the direct return logs
         mlflow run MLProject/ --entry-point main --env-manager local
         
-        # 2. Safely extract the local RUN_ID from the experiment database
-        RUN_ID=$(python -c "import mlflow; df=mlflow.search_runs(experiment_names=['Housing_Prices_Retraining_CI']); print(df.loc[0, 'run_id'])")
+        # 2. Extract the run ID safely from the latest local run using native MLflow Client Python APIs
+        RUN_ID=$(python -c "import mlflow; client = mlflow.MlflowClient(); runs = client.search_runs(experiment_ids=['0']); print(runs[0].info.run_id if runs else '')")
         
         # 3. Save the clean string into the GitHub Environment variable
         echo "MLFLOW_RUN_ID=$RUN_ID" >> $GITHUB_ENV
-        
+
     - name: Log in to Docker Hub
       uses: docker/login-action@v3
       with:
