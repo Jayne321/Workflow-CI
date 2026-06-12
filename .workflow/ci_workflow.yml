@@ -44,11 +44,10 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Build and Push Docker Image via MLflow
+    - name: Build and Push Docker Image via Native Docker
       run: |
-        mlflow models build-docker \
-          -m "runs:/${{ env.MLFLOW_RUN_ID }}/model" \
-          -n "urashia/workflow-ci:latest" \
-          --env-manager local
-
+        # Build the container using the native Docker daemon engine
+        docker build -t urashia/workflow-ci:latest .
+        
+        # Push the finalized compiled container layer straight into Docker Hub
         docker push urashia/workflow-ci:latest
