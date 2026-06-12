@@ -1,0 +1,46 @@
+name: Machine Learning Retraining and Docker CI
+
+on:
+  push:
+    branches:
+      - main  # Alur kerja berjalan otomatis setiap kali Anda melakukan git push ke branch main
+  workflow_dispatch: # Mengizinkan Anda memicu alur kerja secara manual dari halaman web GitHub
+
+jobs:
+  ci_pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Mengunduh seluruh kode proyek dari repositori GitHub ke server runner
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    # 2. Menyiapkan Python versi 3.12.7 sesuai regulasi kelas
+    - name: Set up Python 3.12.7
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12.7'
+
+    # 3. Memasang dependensi inti agar MLflow Project bisa dieksekusi di server Ubuntu
+    - name: Install Core Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install mlflow==2.19.0 scikit-learn pandas numpy
+
+    # 4. Melakukan retraining model otomatis menggunakan instruksi dari file MLProject
+    - name: Run MLflow Project Retraining
+      run: |
+        mlflow run MLProject/ --entry-point main
+
+    # 5. Masuk otomatis ke akun Docker Hub Anda menggunakan kredensial aman (GitHub Secrets)
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.urashia }}
+        password: ${{ secrets.dckr_pat_XD-lxz5ues5L0frFKSejuakV2ic }}
+
+    # 6. Membangun Docker Image & Push Menggunakan Enkripsi Rahasia GitHub Secrets
+    - name: Build and Push Docker Image via MLflow
+      run: |
+        mlflow models build-docker -m "runs:/${{ github.sha }}/model" -n "urashia/workflow-ci:latest"
+        docker push urashia/workflow-ci:latest
