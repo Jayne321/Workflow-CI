@@ -28,15 +28,17 @@ jobs:
         python -m pip install --upgrade pip
         pip install mlflow==2.19.0 scikit-learn pandas numpy
 
-    - name: Run MLflow Project Retraining
+    - - name: Run MLflow Project Retraining
       run: |
-        # Run MLflow project cleanly
+        # 1. Run the MLflow retraining pipeline
         mlflow run MLProject/ --entry-point main --no-conda
         
-        # Safely extract the local RUN_ID to populate the cloud environment variables
-        RUN_ID=$(python -c "import mlflow; print(mlflow.search_runs(experiment_names=['Housing_Prices_Retraining_CI']).iloc[0]['run_id'])")
+        # 2. Corrected python parsing script using .loc[] instead of .iloc[]
+        RUN_ID=$(python -c "import mlflow; df=mlflow.search_runs(experiment_names=['Housing_Prices_Retraining_CI']); print(df.loc[0, 'run_id'])")
+        
+        # 3. Save the clean string into the GitHub Environment variable
         echo "MLFLOW_RUN_ID=$RUN_ID" >> $GITHUB_ENV
-
+        
     - name: Log in to Docker Hub
       uses: docker/login-action@v3
       with:
