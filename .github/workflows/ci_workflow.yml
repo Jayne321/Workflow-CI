@@ -30,10 +30,10 @@ jobs:
 
     - name: Run MLflow Project Retraining
       run: |
-        # 1. Run the MLflow retraining pipeline
-        mlflow run MLProject/ --entry-point main --no-conda
+        # 1. Run the MLflow retraining pipeline using local environment manager
+        mlflow run MLProject/ --entry-point main --env-manager local
         
-        # 2. Corrected python parsing script using .loc[] instead of .iloc[]
+        # 2. Safely extract the local RUN_ID from the experiment database
         RUN_ID=$(python -c "import mlflow; df=mlflow.search_runs(experiment_names=['Housing_Prices_Retraining_CI']); print(df.loc[0, 'run_id'])")
         
         # 3. Save the clean string into the GitHub Environment variable
