@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/Admin/Documents/Dicoding/Workflow-CI/MLProject/mlruns/513698596543497235/98db35e681754f518086f33136e5e200/artifacts
+end_time: 1781250023258
+entry_point_name: ''
+experiment_id: '513698596543497235'
+lifecycle_stage: active
+run_id: 98db35e681754f518086f33136e5e200
+run_name: Cloud_Retrain_Model
+run_uuid: 98db35e681754f518086f33136e5e200
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1781249982001
+status: 3
+tags: []
+user_id: Admin
