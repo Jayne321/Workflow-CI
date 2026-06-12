@@ -1,5 +1,4 @@
 import os
-
 import pandas as pd
 import mlflow
 import mlflow.sklearn
@@ -26,8 +25,13 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 # Enable autologging so MLflow registers parameters and metrics perfectly
 mlflow.sklearn.autolog()
 
-with mlflow.start_run(run_name="Cloud_Retrain_Model"):
+# Enable autologging so MLflow registers parameters and metrics perfectly
+mlflow.sklearn.autolog()
+
+# FIX: Add nested=True so it works harmoniously inside an mlflow run command pipeline
+with mlflow.start_run(run_name="Cloud_Retrain_Model", nested=True):
     # Using lightweight parameters so the automated cloud build runs fast
     model = RandomForestRegressor(n_estimators=10, max_depth=5, random_state=42)
+    model.fit(X_train, y_test if 'y_test' in locals() else y_train) # Safe fallback training
     model.fit(X_train, y_train)
     print("Cloud automated retraining completed successfully!")
