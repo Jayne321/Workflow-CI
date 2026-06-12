@@ -36,8 +36,8 @@ jobs:
     - name: Log in to Docker Hub
       uses: docker/login-action@v3
       with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        username: ${{ secrets.urashia }}
+        password: ${{ secrets.dckr_pat_XD-lxz5ues5L0frFKSejuakV2ic }}
 
     # 6. Membangun Docker Image & Push otomatis dari server GitHub langsung menuju ke Docker Hub
     - name: Build and Push Docker Image via MLflow
