@@ -1,13 +1,23 @@
 import os
+
 import pandas as pd
 import mlflow
 import mlflow.sklearn
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_PATH = os.path.join(BASE_DIR, "housing_preprocessing.csv")
+TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI", "file://" + os.path.join(BASE_DIR, "..", "mlruns"))
+
+mlflow.set_tracking_uri(TRACKING_URI)
 mlflow.set_experiment("Housing_Prices_Retraining_CI")
 
-df = pd.read_csv("housing_preprocessing.csv")
+if not os.path.exists(DATA_PATH):
+    raise FileNotFoundError(f"Training data not found at: {DATA_PATH}")
+
+# Read the local data file from the MLProject folder so the CI runner and local runs both use the same path.
+df = pd.read_csv(DATA_PATH)
 X = df.drop(columns=['median_house_value'])
 y = df['median_house_value']
 

@@ -3,44 +3,69 @@ name: Machine Learning Retraining and Docker CI
 on:
   push:
     branches:
-      - main  # Alur kerja berjalan otomatis setiap kali Anda melakukan git push ke branch main
-  workflow_dispatch: # Mengizinkan Anda memicu alur kerja secara manual dari halaman web GitHub
+      - main
+  workflow_dispatch:
 
 jobs:
   ci_pipeline:
     runs-on: ubuntu-latest
+    env:
+      MLFLOW_TRACKING_URI: file://${{ github.workspace }}/mlruns
 
     steps:
-    # 1. Mengunduh seluruh kode proyek dari repositori GitHub ke server runner cloud
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    # 2. Menyiapkan Python versi 3.12.7 sesuai regulasi kelas
-    - name: Set up Python 3.12.7
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12.7'
+      - name: Set up Python 3.12.7
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.7'
 
-    # 3. Memasang dependensi inti agar MLflow Project bisa dieksekusi di server Ubuntu runner
-    - name: Install Core Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install mlflow==2.19.0 scikit-learn pandas numpy
+      - name: Install Core Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install mlflow==2.19.0 scikit-learn pandas numpy
 
-    # 4. Melakukan retraining model otomatis menggunakan instruksi dari folder MLProject/
-    - name: Run MLflow Project Retraining
-      run: |
-        mlflow run MLProject/ --entry-point main
+      - name: Run MLflow Project Retraining
+        run: |
+          mlflow run MLProject/ --entry-point main
 
-    # 5. GitHub login otomatis ke akun Docker Hub Anda menggunakan variabel aman GitHub Secrets
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.urashia }}
-        password: ${{ secrets.dckr_pat_XD-lxz5ues5L0frFKSejuakV2ic }}
+      - name: Capture Latest MLflow Run ID
+        shell: bash
+        run: |
+          python - <<'PY' >> "$GITHUB_ENV"
+          import os
+          import mlflow
 
-    # 6. Membangun Docker Image & Push otomatis dari server GitHub langsung menuju ke Docker Hub
-    - name: Build and Push Docker Image via MLflow
-      run: |
-        mlflow models build-docker -m "runs:/${{ github.sha }}/model" -n "urashia/workflow-ci:latest"
-        docker push urashia/workflow-ci:latest
+          tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "file://" + os.path.abspath("mlruns"))
+          mlflow.set_tracking_uri(tracking_uri)
+
+          experiment = mlflow.get_experiment_by_name("Housing_Prices_Retraining_CI")
+          if experiment is None:
+              raise RuntimeError("MLflow experiment 'Housing_Prices_Retraining_CI' was not found.")
+
+          runs = mlflow.search_runs(
+              experiment_ids=[experiment.experiment_id],
+              order_by=["start_time DESC"],
+              max_results=1,
+          )
+          if runs.empty:
+              raise RuntimeError("No MLflow run was produced by the training step.")
+
+          run_id = runs.iloc[0]['run_id']
+          print(f"Latest MLflow run ID: {run_id}")
+          print(f"RUN_ID={run_id}")
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as fh:
+              fh.write(f"RUN_ID={run_id}\n")
+          PY
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.urashia }}
+          password: ${{ secrets.dckr_pat_XD-lxz5ues5L0frFKSejuakV2ic }}
+
+      - name: Build and Push Docker Image via MLflow
+        run: |
+          mlflow models build-docker -m "runs:${RUN_ID}/model" -n "urashia/workflow-ci:latest"
+          docker push urashia/workflow-ci:latest
