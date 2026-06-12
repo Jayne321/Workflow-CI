@@ -21,6 +21,7 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.12.7'
+        cache: 'pip'
 
     - name: Install Core Dependencies
       run: |
@@ -29,13 +30,11 @@ jobs:
 
     - name: Run MLflow Project Retraining
       run: |
-        # 1. Run the MLflow retraining pipeline and capture the direct return logs
-        mlflow run MLProject/ --entry-point main --env-manager local
+        # Run MLflow project cleanly
+        mlflow run MLProject/ --entry-point main --no-conda
         
-        # 2. Extract the run ID safely from the latest local run using native MLflow Client Python APIs
-        RUN_ID=$(python -c "import mlflow; client = mlflow.MlflowClient(); runs = client.search_runs(experiment_ids=['0']); print(runs[0].info.run_id if runs else '')")
-        
-        # 3. Save the clean string into the GitHub Environment variable
+        # Safely extract the local RUN_ID to populate the cloud environment variables
+        RUN_ID=$(python -c "import mlflow; print(mlflow.search_runs(experiment_names=['Housing_Prices_Retraining_CI']).iloc[0]['run_id'])")
         echo "MLFLOW_RUN_ID=$RUN_ID" >> $GITHUB_ENV
 
     - name: Log in to Docker Hub
